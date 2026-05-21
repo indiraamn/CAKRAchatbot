@@ -3,7 +3,7 @@ Chatbot deteksi dini risiko keterlambatan kelulusan mahasiswa.
 
 ## Cara menjalankan
 
-### 1. Install dependencies
+### 1. Install dependencies (opsional)
 ```
 pip install -r requirements.txt
 ```
