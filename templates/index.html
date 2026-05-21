@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>CAKRA - Chatbot Analisis Kondisi Risiko Akademik</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --primary:    #1F4E79;
+    --primary-lt: #D6E4F0;
+    --accent:     #2E74B5;
+    --green:      #1a7a4a;
+    --green-lt:   #d5f5e3;
+    --amber:      #b45309;
+    --amber-lt:   #fef3c7;
+    --coral:      #b91c1c;
+    --coral-lt:   #fee2e2;
+    --red:        #7f1d1d;
+    --red-lt:     #fecaca;
+    --bg:         #f0f4f8;
+    --surface:    #ffffff;
+    --text:       #1a202c;
+    --muted:      #718096;
+    --border:     #e2e8f0;
+    --radius:     16px;
+    --radius-sm:  10px;
+    --shadow:     0 1px 3px rgba(0,0,0,0.08);
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: stretch;
+  }
+
+  /* ── Phone frame ── */
+  .phone {
+    width: 100%;
+    max-width: 420px;
+    min-height: 100vh;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+
+  /* ── Header ── */
+  .header {
+    background: var(--primary);
+    color: white;
+    padding: 16px 20px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .header-avatar {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+  .header-info h1 { font-size: 16px; font-weight: 600; }
+  .header-info p  { font-size: 12px; opacity: 0.8; margin-top: 1px; }
+  .header-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #4ade80;
+    display: inline-block;
+    margin-right: 4px;
+  }
+
+  /* ── Chat area ── */
+  .chat-area {
+    flex: 1;
+    padding: 16px 14px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-bottom: 160px;
+  }
+
+  /* ── Bubbles ── */
+  .bubble-wrap { display: flex; gap: 8px; align-items: flex-end; max-width: 88%; }
+  .bubble-wrap.bot  { align-self: flex-start; }
+  .bubble-wrap.user { align-self: flex-end; flex-direction: row-reverse; }
+
+  .bot-avatar {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: var(--primary);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; flex-shrink: 0;
+  }
+  .bubble {
+    padding: 11px 14px;
+    border-radius: 18px;
+    font-size: 14px;
+    line-height: 1.55;
+    max-width: 100%;
+    word-break: break-word;
+  }
+  .bubble.bot {
+    background: var(--surface);
+    color: var(--text);
+    border-bottom-left-radius: 4px;
+    box-shadow: var(--shadow);
+  }
+  .bubble.user {
+    background: var(--primary);
+    color: white;
+    border-bottom-right-radius: 4px;
+  }
+  .bubble strong { font-weight: 600; }
+
+  /* ── Typing indicator ── */
+  .typing { display: flex; gap: 4px; padding: 12px 14px; }
+  .typing span {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--muted);
+    animation: bounce 1.2s infinite;
+  }
+  .typing span:nth-child(2) { animation-delay: 0.2s; }
+  .typing span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce {
+    0%,60%,100% { transform: translateY(0); }
+    30% { transform: translateY(-6px); }
+  }
+
+  /* ── Choice buttons ── */
+  .choices-wrap {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    margin-top: 4px; padding: 0 0 0 38px;
+    align-self: flex-start; width: 100%;
+  }
+  .choice-btn {
+    padding: 8px 16px;
+    border-radius: 99px;
+    border: 1.5px solid var(--accent);
+    background: white;
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .choice-btn:active { transform: scale(0.96); }
+  .choice-btn:hover  { background: var(--primary-lt); }
+
+  /* ── Result card ── */
+  .result-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    margin-top: 4px;
+    align-self: flex-start;
+    width: calc(100% - 4px);
+  }
+  .result-header {
+    padding: 14px 16px 12px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .result-header .emoji { font-size: 22px; }
+  .result-header .info h3 { font-size: 15px; font-weight: 600; }
+  .result-header .info p  { font-size: 12px; margin-top: 2px; }
+  .status-badge {
+    margin-left: auto;
+    padding: 4px 12px;
+    border-radius: 99px;
+    font-size: 12px; font-weight: 600;
+  }
+  .result-body { padding: 0 16px 14px; }
+  .result-desc {
+    font-size: 13px; line-height: 1.6;
+    color: var(--text); margin-bottom: 12px;
+  }
+  .result-prob {
+    font-size: 12px; color: var(--muted);
+    margin-bottom: 12px;
+  }
+  .prob-bar {
+    height: 6px; border-radius: 99px;
+    background: var(--border); margin-top: 4px; overflow: hidden;
+  }
+  .prob-fill { height: 100%; border-radius: 99px; transition: width 1s ease; }
+
+  .faktor-title {
+    font-size: 12px; font-weight: 600;
+    color: var(--muted); text-transform: uppercase;
+    letter-spacing: 0.05em; margin-bottom: 8px;
+  }
+  .faktor-list { list-style: none; display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
+  .faktor-list li {
+    font-size: 13px; color: var(--text);
+    padding-left: 16px; position: relative; line-height: 1.5;
+  }
+  .faktor-list li::before {
+    content: "•"; position: absolute; left: 0;
+    color: var(--accent); font-weight: bold;
+  }
+
+  .divider { height: 1px; background: var(--border); margin: 12px 0; }
+
+  .rekom-title {
+    font-size: 12px; font-weight: 600;
+    color: var(--muted); text-transform: uppercase;
+    letter-spacing: 0.05em; margin-bottom: 8px;
+  }
+  .rekom-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+  .rekom-list li {
+    font-size: 13px; color: var(--text);
+    display: flex; gap: 8px; line-height: 1.5;
+  }
+  .rekom-list li .num {
+    width: 20px; height: 20px; border-radius: 50%;
+    background: var(--primary-lt); color: var(--primary);
+    font-size: 11px; font-weight: 600;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 1px;
+  }
+
+  .restart-btn {
+    display: block; width: 100%; margin-top: 14px;
+    padding: 12px;
+    background: var(--primary); color: white;
+    border: none; border-radius: var(--radius-sm);
+    font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: opacity 0.2s;
+  }
+  .restart-btn:active { opacity: 0.85; }
+
+  /* color variants */
+  .color-green  .result-header { background: var(--green-lt); }
+  .color-green  .result-header .info h3 { color: var(--green); }
+  .color-green  .result-header .info p  { color: var(--green); opacity: 0.8; }
+  .color-green  .status-badge  { background: var(--green-lt); color: var(--green); }
+  .color-green  .prob-fill     { background: var(--green); }
+
+  .color-amber  .result-header { background: var(--amber-lt); }
+  .color-amber  .result-header .info h3 { color: var(--amber); }
+  .color-amber  .result-header .info p  { color: var(--amber); opacity: 0.8; }
+  .color-amber  .status-badge  { background: var(--amber-lt); color: var(--amber); }
+  .color-amber  .prob-fill     { background: var(--amber); }
+
+  .color-coral  .result-header { background: var(--coral-lt); }
+  .color-coral  .result-header .info h3 { color: var(--coral); }
+  .color-coral  .result-header .info p  { color: var(--coral); opacity: 0.8; }
+  .color-coral  .status-badge  { background: var(--coral-lt); color: var(--coral); }
+  .color-coral  .prob-fill     { background: var(--coral); }
+
+  .color-red    .result-header { background: var(--red-lt); }
+  .color-red    .result-header .info h3 { color: var(--red); }
+  .color-red    .result-header .info p  { color: var(--red); opacity: 0.8; }
+  .color-red    .status-badge  { background: var(--red-lt); color: var(--red); }
+  .color-red    .prob-fill     { background: var(--red); }
+
+  /* ── Input area ── */
+  .input-area {
+    position: fixed;
+    bottom: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 100%; max-width: 420px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 12px 14px 20px;
+  }
+  .input-row {
+    display: flex; gap: 8px; align-items: center;
+  }
+  .input-row input {
+    flex: 1; padding: 11px 16px;
+    border: 1.5px solid var(--border);
+    border-radius: 99px;
+    font-size: 14px; color: var(--text);
+    outline: none; background: var(--bg);
+    transition: border-color 0.2s;
+  }
+  .input-row input:focus { border-color: var(--accent); }
+  .input-row input::placeholder { color: var(--muted); }
+  .send-btn {
+    width: 42px; height: 42px;
+    border-radius: 50%;
+    background: var(--primary); border: none;
+    color: white; font-size: 18px;
+    cursor: pointer; display: flex;
+    align-items: center; justify-content: center;
+    transition: opacity 0.2s;
+    flex-shrink: 0;
+  }
+  .send-btn:active { opacity: 0.8; }
+  .send-btn:disabled { opacity: 0.4; cursor: default; }
+
+  .disclaimer {
+    font-size: 11px; color: var(--muted);
+    text-align: center; margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+<div class="phone">
+  <!-- Header -->
+  <div class="header">
+    <div class="header-avatar">🤖</div>
+    <div class="header-info">
+      <h1>CAKRA</h1>
+      <p><span class="header-dot"></span>Chatbot Analisis Kondisi Risiko Akademik</p>
+    </div>
+  </div>
+
+  <!-- Chat -->
+  <div class="chat-area" id="chatArea"></div>
+
+  <!-- Input -->
+  <div class="input-area" id="inputArea">
+    <div class="input-row">
+      <input type="text" id="textInput" placeholder="Ketik pesan..." autocomplete="off"/>
+      <button class="send-btn" id="sendBtn" onclick="sendText()">➤</button>
+    </div>
+    <p class="disclaimer">ARIA hanya alat bantu refleksi, bukan diagnosis resmi.</p>
+  </div>
+</div>
+
+<script>
+const chatArea   = document.getElementById("chatArea");
+const textInput  = document.getElementById("textInput");
+const sendBtn    = document.getElementById("sendBtn");
+let currentInputType = "text";
+
+// ── Render helpers ────────────────────────────────────────────────
+function scrollBottom() {
+  setTimeout(() => chatArea.scrollTo({ top: chatArea.scrollHeight, behavior: "smooth" }), 50);
+}
+
+function parseMarkdown(text) {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\n/g, "<br>");
+}
+
+function addBubble(text, type) {
+  const wrap = document.createElement("div");
+  wrap.className = `bubble-wrap ${type}`;
+  if (type === "bot") {
+    wrap.innerHTML = `
+      <div class="bot-avatar">🤖</div>
+      <div class="bubble bot">${parseMarkdown(text)}</div>`;
+  } else {
+    wrap.innerHTML = `<div class="bubble user">${text}</div>`;
+  }
+  chatArea.appendChild(wrap);
+  scrollBottom();
+  return wrap;
+}
+
+function showTyping() {
+  const wrap = document.createElement("div");
+  wrap.className = "bubble-wrap bot";
+  wrap.id = "typing";
+  wrap.innerHTML = `
+    <div class="bot-avatar">🤖</div>
+    <div class="bubble bot"><div class="typing">
+      <span></span><span></span><span></span>
+    </div></div>`;
+  chatArea.appendChild(wrap);
+  scrollBottom();
+}
+
+function removeTyping() {
+  const t = document.getElementById("typing");
+  if (t) t.remove();
+}
+
+function showChoices(choices) {
+  const wrap = document.createElement("div");
+  wrap.className = "choices-wrap";
+  wrap.id = "choicesWrap";
+  choices.forEach(c => {
+    const btn = document.createElement("button");
+    btn.className = "choice-btn";
+    btn.textContent = c;
+    btn.onclick = () => selectChoice(c);
+    wrap.appendChild(btn);
+  });
+  chatArea.appendChild(wrap);
+  scrollBottom();
+}
+
+function removeChoices() {
+  const el = document.getElementById("choicesWrap");
+  if (el) el.remove();
+}
+
+function showResult(result) {
+  const card = document.createElement("div");
+  card.className = `result-card color-${result.color}`;
+
+  const faktors = result.faktor.map((f, i) =>
+    `<li>${f}</li>`).join("");
+  const rekoms = result.rekomendasi.map((r, i) =>
+    `<li><span class="num">${i+1}</span><span>${r}</span></li>`).join("");
+
+  card.innerHTML = `
+    <div class="result-header">
+      <span class="emoji">${result.emoji}</span>
+      <div class="info">
+        <h3>${result.judul}</h3>
+        <p>${result.pesan.substring(0, 60)}...</p>
+      </div>
+      <span class="status-badge">${result.status}</span>
+    </div>
+    <div class="result-body">
+      <p class="result-desc">${result.pesan}</p>
+      <p class="result-prob">
+        Probabilitas risiko: <strong>${result.prob}%</strong>
+        <div class="prob-bar"><div class="prob-fill" id="probFill" style="width:0%"></div></div>
+      </p>
+      <p class="faktor-title">Faktor yang terdeteksi</p>
+      <ul class="faktor-list">${faktors}</ul>
+      <div class="divider"></div>
+      <p class="rekom-title">Rekomendasi tindakan</p>
+      <ul class="rekom-list">${rekoms}</ul>
+      <button class="restart-btn" onclick="restart()">🔄 Mulai Analisis Ulang</button>
+    </div>`;
+
+  const wrap = document.createElement("div");
+  wrap.className = "bubble-wrap bot";
+  wrap.style.width = "100%";
+  wrap.appendChild(card);
+  chatArea.appendChild(wrap);
+  scrollBottom();
+
+  // Animate prob bar
+  setTimeout(() => {
+    const fill = document.getElementById("probFill");
+    if (fill) fill.style.width = result.prob + "%";
+  }, 300);
+}
+
+// ── Input controls ────────────────────────────────────────────────
+function setInputMode(type, placeholder = "") {
+  currentInputType = type;
+  textInput.style.display = (type === "number" || type === "text") ? "block" : "none";
+  sendBtn.style.display    = (type === "number" || type === "text") ? "flex"  : "none";
+  if (placeholder) textInput.placeholder = placeholder;
+  if (type === "number" || type === "text") {
+    textInput.value = "";
+    setTimeout(() => textInput.focus(), 100);
+  }
+}
+
+// ── API calls ─────────────────────────────────────────────────────
+async function callApi(endpoint, body = {}) {
+  const res = await fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  return res.json();
+}
+
+async function start() {
+  chatArea.innerHTML = "";
+  showTyping();
+  const data = await callApi("/api/start");
+  removeTyping();
+  addBubble(data.msg, "bot");
+  handleResponse(data);
+}
+
+async function sendText() {
+  const val = textInput.value.trim();
+  if (!val) return;
+  if (currentInputType === "number" && isNaN(parseFloat(val))) {
+    textInput.placeholder = "Masukkan angka ya!";
+    return;
+  }
+  addBubble(val, "user");
+  textInput.value = "";
+  sendBtn.disabled = true;
+  setInputMode("none");
+  await processInput(val);
+  sendBtn.disabled = false;
+}
+
+async function selectChoice(choice) {
+  removeChoices();
+  addBubble(choice, "user");
+  setInputMode("none");
+  await processInput(choice);
+}
+
+async function processInput(value) {
+  showTyping();
+  const data = await callApi("/api/chat", { message: value });
+  removeTyping();
+
+  if (data.input_type === "result") {
+    addBubble("Oke, saya sudah menganalisis semua data yang kamu berikan. Ini hasilnya:", "bot");
+    showResult(data.result);
+  } else {
+    addBubble(data.msg, "bot");
+    handleResponse(data);
+  }
+}
+
+function handleResponse(data) {
+  if (data.input_type === "choices") {
+    setInputMode("none");
+    showChoices(data.choices);
+  } else if (data.input_type === "number") {
+    setInputMode("number", data.placeholder || "Ketik angka...");
+  } else {
+    setInputMode("text", data.placeholder || "Ketik pesan...");
+  }
+}
+
+async function restart() {
+  await callApi("/api/restart");
+  start();
+}
+
+// ── Enter key ─────────────────────────────────────────────────────
+textInput.addEventListener("keydown", e => {
+  if (e.key === "Enter") sendText();
+});
+
+// ── Init ──────────────────────────────────────────────────────────
+start();
+</script>
+</body>
+</html>
