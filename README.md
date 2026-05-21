@@ -1,4 +1,4 @@
-# ARIA — Asisten Risiko Akademik
+# CAKRA — Chatbot Analisis Kondisi Risiko Akademik
 Chatbot deteksi dini risiko keterlambatan kelulusan mahasiswa.
 
 ## Cara menjalankan
