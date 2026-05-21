@@ -5,7 +5,7 @@ from datetime import datetime
 app = Flask(__name__)
 app.secret_key = ""
 
-# ─── DECISION TREE (simulasi max_depth=4) ────────────────────────────────────
+# DECISION TREE (simulasi max_depth=4)
 def decision_tree(ipk, sks_lulus, sks_diambil, sisa_matkul, semester,
                   tugas_tertunda, skor_psikologis, kualitas_tidur):
     # Level 1: skor psikologis
@@ -38,7 +38,7 @@ def decision_tree(ipk, sks_lulus, sks_diambil, sisa_matkul, semester,
             else:
                 return "terlambat_lebih", 82
 
-# ─── FORWARD CHAINING (rule-based) ───────────────────────────────────────────
+# FORWARD CHAINING (rule-based) 
 def forward_chaining(ipk, sks_lulus, semester, sisa_matkul):
     if ipk < 2.0:
         return "risiko_tinggi", "IPK di bawah 2.0 — mendekati batas Drop Out"
@@ -52,7 +52,7 @@ def forward_chaining(ipk, sks_lulus, semester, sisa_matkul):
         return "risiko_tinggi", "Progress SKS jauh di bawah ideal untuk semester ini"
     return None, None
 
-# ─── GENERATE OUTPUT ─────────────────────────────────────────────────────────
+# MEMBUAT OUTPUT 
 def generate_output(label, prob, faktor_utama):
     templates = {
         "tepat_waktu": {
@@ -133,7 +133,7 @@ def generate_output(label, prob, faktor_utama):
     result["faktor"] = faktor_utama
     return result
 
-# ─── CHATBOT STATE MACHINE ────────────────────────────────────────────────────
+# MEMBUAT STATE MACHINE UNTUK CHATBOT
 FLOW = {
     "start": {
         "msg": "Halo! Saya **CAKRA** — Chatbot Analisis Kondisi Risiko Akademik.\n\nSaya akan bantu kamu memantau risiko keterlambatan kelulusan. Kita mulai dengan beberapa pertanyaan singkat ya! 😊\n\nPertama, kamu sekarang semester berapa?",
@@ -278,7 +278,7 @@ def run_inference(data):
 
     return generate_output(dt_label, dt_prob, faktor)
 
-# ─── ROUTES ──────────────────────────────────────────────────────────────────
+# app routes
 @app.route("/")
 def index():
     return render_template("index.html")
