@@ -19,16 +19,6 @@ python app.py
   - Cari IP laptop: `ipconfig` (Windows) atau `ifconfig` (Mac/Linux)
   - Contoh: http://192.168.1.5:5000
 
-## Struktur project
-```
-chatbot/
-├── app.py              ← Backend Flask + logika inferensi
-├── requirements.txt
-├── README.md
-└── templates/
-    └── index.html      ← UI chatbot mobile-style
-```
-
 ## Alur inferensi
 1. Setup awal: mahasiswa input IPK, SKS, semester, matkul wajib sisa
 2. Input harian: tugas tertunda, kualitas tidur, kondisi psikologis, faktor eksternal
