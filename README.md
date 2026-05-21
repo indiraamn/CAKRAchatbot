@@ -1,4 +1,4 @@
-# ARIA — Asisten Risiko Akademik
+# CAKRA — Chatbot Analisis Kondisi Risiko Akademik
 Chatbot deteksi dini risiko keterlambatan kelulusan mahasiswa.
 
 ## Cara menjalankan
@@ -18,16 +18,6 @@ python app.py
 - **HP (jaringan sama):** http://<IP_LAPTOP>:5000
   - Cari IP laptop: `ipconfig` (Windows) atau `ifconfig` (Mac/Linux)
   - Contoh: http://192.168.1.5:5000
-
-## Struktur project
-```
-chatbot/
-├── app.py              ← Backend Flask + logika inferensi
-├── requirements.txt
-├── README.md
-└── templates/
-    └── index.html      ← UI chatbot mobile-style
-```
 
 ## Alur inferensi
 1. Setup awal: mahasiswa input IPK, SKS, semester, matkul wajib sisa
