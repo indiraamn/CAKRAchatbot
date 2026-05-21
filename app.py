@@ -3,7 +3,7 @@ import json
 from datetime import datetime
 
 app = Flask(__name__)
-app.secret_key = "bismillah-chatbot-2026"
+app.secret_key = ""
 
 # ─── DECISION TREE (simulasi max_depth=4) ────────────────────────────────────
 def decision_tree(ipk, sks_lulus, sks_diambil, sisa_matkul, semester,
