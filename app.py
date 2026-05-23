@@ -225,13 +225,34 @@ def parse_value(key, raw):
         return 0
 
 def get_skor_psikologis(kondisi_val, tidur_val, eksternal_val):
-    """Combine daily inputs into psychological score 0-12"""
-    skor = kondisi_val
-    if tidur_val < 5:
-        skor += 2
-    elif tidur_val < 6:
-        skor += 1
+    """
+    Kalkulasi skor psikologis harian (Skala 0-12).
+    Diselaraskan agar total skor maksimal 12 sesuai dokumen rancangan.
+    """
+    skor = 0
+    
+    # 1. Faktor Kondisi (Bobot proporsional max 8 poin)
+    # Input asli dari fungsi parse_value: 2 (Baik), 4 (Biasa), 7 (Lelah), 10 (Kewalahan)
+    if kondisi_val >= 10:
+        skor += 8    # Kewalahan banget = 8 poin
+    elif kondisi_val >= 7:
+        skor += 5    # Agak lelah = 5 poin
+    elif kondisi_val >= 4:
+        skor += 2    # Biasa aja = 2 poin
+    else:
+        skor += 0    # Baik, siap gas = 0 poin
+        
+    # 2. Faktor Kualitas Tidur (Bobot max 2 poin)
+    if tidur_val < 5.0:
+        skor += 2    # Kurang dari 5 jam = 2 poin
+    elif tidur_val < 7.0:
+        skor += 1    # 5-7 jam = 1 poin
+        
+    # 3. Faktor Beban Eksternal (Bobot max 2 poin)
+    # Input asli dari parse_value sudah berupa angka 0, 1, atau 2
     skor += eksternal_val
+    
+    # Pastikan output akhir maksimal 12 sesuai format kuesioner (6 item skor 0-2)
     return min(skor, 12)
 
 def run_inference(data):
