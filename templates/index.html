@@ -38,7 +38,7 @@ let currentInputType = "text";
 
 // ── Render helpers ────────────────────────────────────────────────
 function scrollBottom() {
-  setTimeout(() => chatArea.scrollTo({ top: chatArea.scrollHeight, behavior: "smooth" }), 50);
+  setTimeout(() => chatArea.scrollTop = chatArea.scrollHeight, 150);
 }
 
 function parseMarkdown(text) {

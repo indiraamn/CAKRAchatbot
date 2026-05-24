@@ -35,7 +35,7 @@
   .phone {
     width: 100%;
     max-width: 420px;
-    min-height: 100vh;
+    height: 100vh;
     background: var(--bg);
     display: flex;
     flex-direction: column;
