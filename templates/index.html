@@ -1,241 +1,290 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<link rel="stylesheet" href="/static/style.css">
-<title>CAKRA - Chatbot Analisis Kondisi Risiko Akademik</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <link rel="stylesheet" href="/static/style.css" />
+  <title>CAKRA - Chatbot Analisis Kondisi Risiko Akademik</title>
 </head>
 <body>
-<div class="phone">
-  <!-- Header -->
-  <div class="header">
-    <div class="header-avatar">🤖</div>
-    <div class="header-info">
-      <h1>CAKRA</h1>
-      <p><span class="header-dot"></span>Chatbot Analisis Kondisi Risiko Akademik</p>
-    </div>
-  </div>
-
-  <!-- Chat -->
-  <div class="chat-area" id="chatArea"></div>
-
-  <!-- Input -->
-  <div class="input-area" id="inputArea">
-    <div class="input-row">
-      <input type="text" id="textInput" placeholder="Ketik pesan..." autocomplete="off"/>
-      <button class="send-btn" id="sendBtn" onclick="sendText()">➤</button>
-    </div>
-    <p class="disclaimer">CAKRA hanya alat bantu refleksi, bukan diagnosis resmi.</p>
-  </div>
-</div>
-
-<script>
-const chatArea   = document.getElementById("chatArea");
-const textInput  = document.getElementById("textInput");
-const sendBtn    = document.getElementById("sendBtn");
-let currentInputType = "text";
-
-// ── Render helpers ────────────────────────────────────────────────
-function scrollBottom() {
-  setTimeout(() => chatArea.scrollTop = chatArea.scrollHeight, 150);
-}
-
-function parseMarkdown(text) {
-  return text
-    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-    .replace(/\n/g, "<br>");
-}
-
-function addBubble(text, type) {
-  const wrap = document.createElement("div");
-  wrap.className = `bubble-wrap ${type}`;
-  if (type === "bot") {
-    wrap.innerHTML = `
-      <div class="bot-avatar">🤖</div>
-      <div class="bubble bot">${parseMarkdown(text)}</div>`;
-  } else {
-    wrap.innerHTML = `<div class="bubble user">${text}</div>`;
-  }
-  chatArea.appendChild(wrap);
-  scrollBottom();
-  return wrap;
-}
-
-function showTyping() {
-  const wrap = document.createElement("div");
-  wrap.className = "bubble-wrap bot";
-  wrap.id = "typing";
-  wrap.innerHTML = `
-    <div class="bot-avatar">🤖</div>
-    <div class="bubble bot"><div class="typing">
-      <span></span><span></span><span></span>
-    </div></div>`;
-  chatArea.appendChild(wrap);
-  scrollBottom();
-}
-
-function removeTyping() {
-  const t = document.getElementById("typing");
-  if (t) t.remove();
-}
-
-function showChoices(choices) {
-  const wrap = document.createElement("div");
-  wrap.className = "choices-wrap";
-  wrap.id = "choicesWrap";
-  choices.forEach(c => {
-    const btn = document.createElement("button");
-    btn.className = "choice-btn";
-    btn.textContent = c;
-    btn.onclick = () => selectChoice(c);
-    wrap.appendChild(btn);
-  });
-  chatArea.appendChild(wrap);
-  scrollBottom();
-}
-
-function removeChoices() {
-  const el = document.getElementById("choicesWrap");
-  if (el) el.remove();
-}
-
-function showResult(result) {
-  const card = document.createElement("div");
-  card.className = `result-card color-${result.color}`;
-
-  const faktors = result.faktor.map((f, i) =>
-    `<li>${f}</li>`).join("");
-  const rekoms = result.rekomendasi.map((r, i) =>
-    `<li><span class="num">${i+1}</span><span>${r}</span></li>`).join("");
-
-  card.innerHTML = `
-    <div class="result-header">
-      <span class="emoji">${result.emoji}</span>
-      <div class="info">
-        <h3>${result.judul}</h3>
-        <p>${result.pesan.substring(0, 60)}...</p>
+  <div class="phone">
+    <!-- header -->
+    <div class="header">
+      <div class="header-avatar">🤖</div>
+      <div class="header-info">
+        <h1>CAKRA</h1>
+        <p>
+          <span class="header-dot"></span>
+          Chatbot Analisis Kondisi Risiko Akademik
+        </p>
       </div>
-      <span class="status-badge">${result.status}</span>
     </div>
-    <div class="result-body">
-      <p class="result-desc">${result.pesan}</p>
-      <p class="result-prob">
-        Probabilitas risiko: <strong>${result.prob}%</strong>
-        <div class="prob-bar"><div class="prob-fill" id="probFill" style="width:0%"></div></div>
-      </p>
-      <p class="faktor-title">Faktor yang terdeteksi</p>
-      <ul class="faktor-list">${faktors}</ul>
-      <div class="divider"></div>
-      <p class="rekom-title">Rekomendasi tindakan</p>
-      <ul class="rekom-list">${rekoms}</ul>
-      <button class="restart-btn" onclick="restart()">🔄 Mulai Analisis Ulang</button>
-    </div>`;
 
-  const wrap = document.createElement("div");
-  wrap.className = "bubble-wrap bot";
-  wrap.style.width = "100%";
-  wrap.appendChild(card);
-  chatArea.appendChild(wrap);
-  scrollBottom();
+    <!-- user chat -->
+    <div class="chat-area" id="chatArea"></div>
+    <!-- input -->
+    <div class="input-area" id="inputArea">
+      <div class="input-row">
+        <input
+          type="text"
+          id="textInput"
+          placeholder="Ketik pesan..."
+          autocomplete="off"/>
+        <button class="send-btn" id="sendBtn" onclick="sendText()">➤</button>
+      </div>
+      <p class="disclaimer">CAKRA hanya alat bantu refleksi, bukan diagnosis resmi.</p>
+    </div>
+  </div>
 
-  // Animate prob bar
-  setTimeout(() => {
-    const fill = document.getElementById("probFill");
-    if (fill) fill.style.width = result.prob + "%";
-  }, 300);
-}
+  <script>
+    const chatArea = document.getElementById("chatArea");
+    const textInput = document.getElementById("textInput");
+    const sendBtn = document.getElementById("sendBtn");
 
-// ── Input controls ────────────────────────────────────────────────
-function setInputMode(type, placeholder = "") {
-  currentInputType = type;
-  textInput.style.display = (type === "number" || type === "text") ? "block" : "none";
-  sendBtn.style.display    = (type === "number" || type === "text") ? "flex"  : "none";
-  if (placeholder) textInput.placeholder = placeholder;
-  if (type === "number" || type === "text") {
-    textInput.value = "";
-    setTimeout(() => textInput.focus(), 100);
-  }
-}
+    let currentInputType = "text";
 
-// ── API calls ─────────────────────────────────────────────────────
-async function callApi(endpoint, body = {}) {
-  const res = await fetch(endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body)
-  });
-  return res.json();
-}
+    // render helpers
 
-async function start() {
-  chatArea.innerHTML = "";
-  showTyping();
-  const data = await callApi("/api/start");
-  removeTyping();
-  addBubble(data.msg, "bot");
-  handleResponse(data);
-}
+    function scrollBottom() {
+      setTimeout(() => {
+        chatArea.scrollTop = chatArea.scrollHeight;
+      }, 150);
+    }
 
-async function sendText() {
-  const val = textInput.value.trim();
-  if (!val) return;
-  if (currentInputType === "number" && isNaN(parseFloat(val))) {
-    textInput.placeholder = "Masukkan angka ya!";
-    return;
-  }
-  addBubble(val, "user");
-  textInput.value = "";
-  sendBtn.disabled = true;
-  setInputMode("none");
-  await processInput(val);
-  sendBtn.disabled = false;
-}
+    function parseMarkdown(text) {
+      return text
+        .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+        .replace(/\n/g, "<br>");
+    }
 
-async function selectChoice(choice) {
-  removeChoices();
-  addBubble(choice, "user");
-  setInputMode("none");
-  await processInput(choice);
-}
+    function addBubble(text, type) {
+      const wrap = document.createElement("div");
+      wrap.className = `bubble-wrap ${type}`;
 
-async function processInput(value) {
-  showTyping();
-  const data = await callApi("/api/chat", { message: value });
-  removeTyping();
+      if (type === "bot") {
+        wrap.innerHTML = `
+          <div class="bot-avatar">🤖</div>
+          <div class="bubble bot">${parseMarkdown(text)}</div>
+        `;
+      } else {
+        wrap.innerHTML = `<div class="bubble user">${text}</div>`;
+      }
 
-  if (data.input_type === "result") {
-    addBubble("Oke, saya sudah menganalisis semua data yang kamu berikan. Ini hasilnya:", "bot");
-    showResult(data.result);
-  } else {
-    addBubble(data.msg, "bot");
-    handleResponse(data);
-  }
-}
+      chatArea.appendChild(wrap);
+      scrollBottom();
+      return wrap;
+    }
 
-function handleResponse(data) {
-  if (data.input_type === "choices") {
-    setInputMode("none");
-    showChoices(data.choices);
-  } else if (data.input_type === "number") {
-    setInputMode("number", data.placeholder || "Ketik angka...");
-  } else {
-    setInputMode("text", data.placeholder || "Ketik pesan...");
-  }
-}
+    function showTyping() {
+      const wrap = document.createElement("div");
+      wrap.className = "bubble-wrap bot";
+      wrap.id = "typing";
+      wrap.innerHTML = `
+        <div class="bot-avatar">🤖</div>
+        <div class="bubble bot">
+          <div class="typing">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+        </div>
+      `;
+      chatArea.appendChild(wrap);
+      scrollBottom();
+    }
 
-async function restart() {
-  await callApi("/api/restart");
-  start();
-}
+    function removeTyping() {
+      const typing = document.getElementById("typing");
+      if (typing) typing.remove();
+    }
 
-// ── Enter key ─────────────────────────────────────────────────────
-textInput.addEventListener("keydown", e => {
-  if (e.key === "Enter") sendText();
-});
+    function showChoices(choices) {
+      const wrap = document.createElement("div");
+      wrap.className = "choices-wrap";
+      wrap.id = "choicesWrap";
 
-// ── Init ──────────────────────────────────────────────────────────
-start();
-</script>
+      choices.forEach(choice => {
+        const btn = document.createElement("button");
+        btn.className = "choice-btn";
+        btn.textContent = choice;
+        btn.onclick = () => selectChoice(choice);
+        wrap.appendChild(btn);
+      });
+
+      chatArea.appendChild(wrap);
+      scrollBottom();
+    }
+
+    function removeChoices() {
+      const el = document.getElementById("choicesWrap");
+      if (el) el.remove();
+    }
+
+    function showResult(result) {
+      const card = document.createElement("div");
+      card.className = `result-card color-${result.color}`;
+
+      const faktors = result.faktor.map(f => `<li>${f}</li>`).join("");
+      const rekoms = result.rekomendasi
+        .map((r, i) => `
+          <li>
+            <span class="num">${i + 1}</span>
+            <span>${r}</span>
+          </li>
+        `)
+        .join("");
+
+      card.innerHTML = `
+        <div class="result-header">
+          <span class="emoji">${result.emoji}</span>
+          <div class="info">
+            <h3>${result.judul}</h3>
+            <p>${result.pesan.substring(0, 60)}...</p>
+          </div>
+          <span class="status-badge">${result.status}</span>
+        </div>
+
+        <div class="result-body">
+          <p class="result-desc">${result.pesan}</p>
+
+          <p class="result-prob">
+            Probabilitas risiko: <strong>${result.prob}%</strong>
+            <div class="prob-bar">
+              <div class="prob-fill" id="probFill" style="width: 0%"></div>
+            </div>
+          </p>
+
+          <p class="faktor-title">Faktor yang terdeteksi</p>
+          <ul class="faktor-list">${faktors}</ul>
+
+          <div class="divider"></div>
+
+          <p class="rekom-title">Rekomendasi tindakan</p>
+          <ul class="rekom-list">${rekoms}</ul>
+
+          <button class="restart-btn" onclick="restart()">🔄 Mulai Analisis Ulang</button>
+        </div>
+      `;
+
+      const wrap = document.createElement("div");
+      wrap.className = "bubble-wrap bot";
+      wrap.style.width = "100%";
+      wrap.appendChild(card);
+
+      chatArea.appendChild(wrap);
+      scrollBottom();
+
+      setTimeout(() => {
+        const fill = document.getElementById("probFill");
+        if (fill) fill.style.width = result.prob + "%";
+      }, 300);
+    }
+
+    // kontrol input
+
+    function setInputMode(type, placeholder = "") {
+      currentInputType = type;
+      const showInput = type === "number" || type === "text";
+
+      textInput.style.display = showInput ? "block" : "none";
+      sendBtn.style.display = showInput ? "flex" : "none";
+
+      if (placeholder) textInput.placeholder = placeholder;
+
+      if (showInput) {
+        textInput.value = "";
+        setTimeout(() => textInput.focus(), 100);
+      }
+    }
+
+    // panggil API
+
+    async function callApi(endpoint, body = {}) {
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      return res.json();
+    }
+
+    async function start() {
+      chatArea.innerHTML = "";
+      showTyping();
+
+      const data = await callApi("/api/start");
+
+      removeTyping();
+      addBubble(data.msg, "bot");
+      handleResponse(data);
+    }
+
+    async function sendText() {
+      const val = textInput.value.trim();
+      if (!val) return;
+
+      if (currentInputType === "number" && isNaN(parseFloat(val))) {
+        textInput.placeholder = "Masukkan angka ya!";
+        return;
+      }
+
+      addBubble(val, "user");
+      textInput.value = "";
+      sendBtn.disabled = true;
+      setInputMode("none");
+
+      await processInput(val);
+
+      sendBtn.disabled = false;
+    }
+
+    async function selectChoice(choice) {
+      removeChoices();
+      addBubble(choice, "user");
+      setInputMode("none");
+      await processInput(choice);
+    }
+
+    async function processInput(value) {
+      showTyping();
+
+      const data = await callApi("/api/chat", { message: value });
+
+      removeTyping();
+
+      if (data.input_type === "result") {
+        addBubble("Oke, saya sudah menganalisis semua data yang kamu berikan. Ini hasilnya:", "bot");
+        showResult(data.result);
+      } else {
+        addBubble(data.msg, "bot");
+        handleResponse(data);
+      }
+    }
+
+    function handleResponse(data) {
+      if (data.input_type === "choices") {
+        setInputMode("none");
+        showChoices(data.choices);
+      } else if (data.input_type === "number") {
+        setInputMode("number", data.placeholder || "Ketik angka...");
+      } else {
+        setInputMode("text", data.placeholder || "Ketik pesan...");
+      }
+    }
+
+    async function restart() {
+      await callApi("/api/restart");
+      start();
+    }
+
+    // enter key
+
+    textInput.addEventListener("keydown", e => {
+      if (e.key === "Enter") sendText();
+    });
+
+    // initial start
+    start();
+  </script>
 </body>
 </html>
