@@ -7,14 +7,14 @@ import os
 app = Flask(__name__)
 app.secret_key = ""
 
-# ── Load model yang sudah dilatih dari dataset.csv ──────────────────────────
+# Load model yang sudah dilatih dari dataset.csv
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 bundle   = joblib.load(os.path.join(BASE_DIR, "model.pkl"))
 MODEL    = bundle["model"]
 FITUR    = bundle["fitur"]   # urutan fitur HARUS sama dengan saat training
 LABELS   = bundle["label"]   # ['Tepat_Waktu', 'Terlambat_1Sem', 'Terlambat_Lebih']
 
-# ── FORWARD CHAINING (rule-based, sesuai Tugas 3 hal. 2) ───────────────────
+# FORWARD CHAINING (rule-based) untuk kondisi pasti yang sudah jelas dari data
 def forward_chaining(ipk, sks_lulus, semester, sisa_matkul):
     """
     Cek aturan pasti satu per satu.
@@ -33,7 +33,7 @@ def forward_chaining(ipk, sks_lulus, semester, sisa_matkul):
     return None, None
 
 
-# ── DECISION TREE via model.pkl ─────────────────────────────────────────────
+# DECISION TREE via model.pkl
 def run_decision_tree(semester, ipk, sks_lulus, sks_diambil,
                       sisa_matkul, tugas_tertunda, skor_psiko,
                       tidur_jam, motivasi_num):
@@ -41,7 +41,7 @@ def run_decision_tree(semester, ipk, sks_lulus, sks_diambil,
     Jalankan model scikit-learn yang sudah dilatih dari 100 data dummy.
     Kembalikan (label, probabilitas_persen, dict_feature_importance).
     """
-    # Susun vektor fitur SESUAI urutan FITUR dari model.pkl
+    # Susun fitur SESUAI urutan FITUR dari model.pkl
     X = pd.DataFrame([[semester, ipk, sks_lulus, sks_diambil,
                         sisa_matkul, tugas_tertunda, skor_psiko,
                         tidur_jam, motivasi_num]], columns=FITUR)
@@ -58,14 +58,14 @@ def run_decision_tree(semester, ipk, sks_lulus, sks_diambil,
     return label_pred, prob_pct, top_factors
 
 
-# ── KONVERSI LABEL MODEL → INTERNAL KEY ─────────────────────────────────────
+# KONVERSI LABEL MODEL → INTERNAL KEY
 LABEL_MAP = {
     "Tepat_Waktu":     "tepat_waktu",
     "Terlambat_1Sem":  "terlambat_1sem",
     "Terlambat_Lebih": "terlambat_lebih",
 }
 
-# ── TEMPLATE OUTPUT ──────────────────────────────────────────────────────────
+# TEMPLATE OUTPUT
 TEMPLATES = {
     "tepat_waktu": {
         "status": "Aman",
@@ -151,48 +151,45 @@ def generate_output(label_key, prob, faktor_list, top_factors=None):
     return result
 
 
-# ── HELPER: parse input chatbot → nilai numerik ──────────────────────────────
+# HELPER: konversi input chatbot ke nilai numerik 
 def parse_value(key, raw):
     if key == "kualitas_tidur":
         return {"< 5 jam": 4.0, "5–7 jam": 6.0, "> 7 jam": 7.5}.get(raw, 6.0)
     if key == "tugas_tertunda":
         return {"0": 0.0, "1–2": 1.5, "3–5": 4.0, "> 5": 6.5}.get(raw, 0.0)
-    if key == "kondisi_emoji":
-        # Dipakai untuk menghitung skor psikologis sebagian
-        return {"😊 Baik, siap gas!": 0, "😐 Biasa aja": 1, "😮‍💨 Agak lelah": 2, "😭 Kewalahan banget": 2}.get(raw, 1)
-    if key == "eksternal":
-        return {"Tidak ada": 0, "Sedikit": 1, "Banyak banget": 2}.get(raw, 0)
-    if key == "motivasi":
-        return {"Rendah": 0, "Sedang": 1, "Tinggi": 2}.get(raw, 1)
+    if key == "psiko_konsentrasi":
+        return {"Mudah": 0, "Cukup sulit": 1, "Sangat sulit": 2}.get(raw, 0)
+    if key == "psiko_kewalahan":
+        return {"Tidak": 0, "Sedikit": 1, "Sangat kewalahan": 2}.get(raw, 0)
+    if key == "psiko_perasaan":
+        return {"Baik": 0, "Biasa": 1, "Tidak baik": 2}.get(raw, 0)
+    if key == "psiko_motivasi":
+        return {"Tidak": 0, "Sedikit": 1, "Ya, sangat": 2}.get(raw, 0)
+    if key == "psiko_lelah":
+        return {"Tidak lelah": 0, "Cukup lelah": 1, "Sangat lelah": 2}.get(raw, 0)
+    if key == "psiko_eksternal":
+        return {"Tidak ada": 0, "Sedikit": 1, "Banyak": 2}.get(raw, 0)
     try:
         return float(raw)
     except (ValueError, TypeError):
         return 0.0
 
 
-def hitung_skor_psikologis(kondisi_raw, tidur_jam, eksternal_val, motivasi_raw):
+def hitung_skor_psikologis(data):
     """
-    Hitung skor psikologis (0–12) dari proxy input harian.
-    Sesuai kuesioner 6 item skor 0–2 dari Tugas 2.
+    Hitung skor psikologis (0–12) dari 6 pertanyaan kuesioner.
+    Setiap item bernilai 0–2, total maksimal 12.
     """
-    skor = 0
-    # Item 1–2: kondisi hari ini (mewakili perasaan & kewalahan) → 0–4
-    kondisi_item = {"😊 Baik, siap gas!": 0, "😐 Biasa aja": 2, "😮‍💨 Agak lelah": 3, "😭 Kewalahan banget": 4}.get(kondisi_raw, 2)
-    skor += min(kondisi_item, 4)
-    # Item 3: kualitas tidur → 0–2
-    if tidur_jam < 5.0:
-        skor += 2
-    elif tidur_jam < 7.0:
-        skor += 1
-    # Item 4: motivasi (invers) → 0–2
-    motivasi_skor = {"Rendah": 2, "Sedang": 1, "Tinggi": 0}.get(motivasi_raw, 1)
-    skor += motivasi_skor
-    # Item 5–6: beban eksternal → 0–2
-    skor += min(int(eksternal_val), 2)
+    skor  = parse_value("psiko_konsentrasi", data.get("psiko_konsentrasi", "Mudah"))
+    skor += parse_value("psiko_kewalahan",   data.get("psiko_kewalahan",   "Tidak"))
+    skor += parse_value("psiko_perasaan",    data.get("psiko_perasaan",    "Baik"))
+    skor += parse_value("psiko_motivasi",    data.get("psiko_motivasi",    "Tidak"))
+    skor += parse_value("psiko_lelah",       data.get("psiko_lelah",       "Tidak lelah"))
+    skor += parse_value("psiko_eksternal",   data.get("psiko_eksternal",   "Tidak ada"))
     return min(skor, 12)
 
 
-# ── STATE MACHINE CHATBOT ────────────────────────────────────────────────────
+# STATE MACHINE CHATBOT
 FLOW = {
     "start": {
         "msg": (
@@ -251,88 +248,52 @@ FLOW = {
         "input_type": "choices",
         "choices": ["0", "1–2", "3–5", "> 5"],
         "key": "tugas_tertunda",
-        "next": "tanya_kondisi",
+        "next": "tanya_konsentrasi",
     },
-    "tanya_kondisi": {
-        "msg": "Kondisi kamu hari ini gimana?",
+    "tanya_konsentrasi": {
+        "msg": "Seberapa sulit kamu berkonsentrasi belajar hari ini?",
         "input_type": "choices",
-        "choices": ["😊 Baik, siap gas!", "😐 Biasa aja", "😮‍💨 Agak lelah", "😭 Kewalahan banget"],
-        "key": "kondisi_emoji",
-        "next": "tanya_motivasi",
+        "choices": ["Mudah", "Cukup sulit", "Sangat sulit"],
+        "key": "psiko_konsentrasi",
+        "next": "tanya_kewalahan",
     },
-    "tanya_motivasi": {
-        "msg": "Seberapa tinggi motivasi belajarmu saat ini?",
+    "tanya_kewalahan": {
+        "msg": "Apakah kamu merasa kewalahan dengan tugas-tugasmu?",
         "input_type": "choices",
-        "choices": ["Rendah", "Sedang", "Tinggi"],
-        "key": "motivasi",
+        "choices": ["Tidak", "Sedikit", "Sangat kewalahan"],
+        "key": "psiko_kewalahan",
+        "next": "tanya_perasaan",
+    },
+    "tanya_perasaan": {
+        "msg": "Bagaimana perasaanmu hari ini?",
+        "input_type": "choices",
+        "choices": ["Baik", "Biasa", "Tidak baik"],
+        "key": "psiko_perasaan",
+        "next": "tanya_motivasi_psiko",
+    },
+    "tanya_motivasi_psiko": {
+        "msg": "Apakah kamu merasa motivasi belajarmu menurun?",
+        "input_type": "choices",
+        "choices": ["Tidak", "Sedikit", "Ya, sangat"],
+        "key": "psiko_motivasi",
+        "next": "tanya_lelah",
+    },
+    "tanya_lelah": {
+        "msg": "Seberapa lelah kamu secara fisik dan mental hari ini?",
+        "input_type": "choices",
+        "choices": ["Tidak lelah", "Cukup lelah", "Sangat lelah"],
+        "key": "psiko_lelah",
         "next": "tanya_eksternal",
     },
     "tanya_eksternal": {
-        "msg": "Ada tanggung jawab di luar kuliah yang menyita waktu belajarmu minggu ini? (kerja, organisasi, dll)",
+        "msg": "Apakah ada tanggung jawab di luar kuliah yang mengurangi waktu belajarmu minggu ini?",
         "input_type": "choices",
-        "choices": ["Tidak ada", "Sedikit", "Banyak banget"],
-        "key": "eksternal",
+        "choices": ["Tidak ada", "Sedikit", "Banyak"],
+        "key": "psiko_eksternal",
         "next": "hasil",
     },
 }
 
-<<<<<<< Updated upstream
-def parse_value(key, raw):
-    """Convert user input to numeric values for inference"""
-    if key == "kualitas_tidur":
-        mapping = {"< 5 jam": 4.5, "5–7 jam": 6.0, "> 7 jam": 7.5}
-        return mapping.get(raw, 6.0)
-    if key == "tugas_tertunda":
-        mapping = {"0": 0, "1–2": 1.5, "3–5": 4.0, "> 5": 6.5}
-        return mapping.get(raw, 0)
-    if key == "kondisi":
-        mapping = {
-            "😊 Baik, siap gas!": 2,
-            "😐 Biasa aja": 4,
-            "😮‍💨 Agak lelah": 7,
-            "😭 Kewalahan banget": 10
-        }
-        return mapping.get(raw, 4)
-    if key == "eksternal":
-        mapping = {"Tidak ada": 0, "Sedikit": 1, "Banyak banget": 2}
-        return mapping.get(raw, 0)
-    try:
-        return float(raw)
-    except:
-        return 0
-
-def get_skor_psikologis(kondisi_val, tidur_val, eksternal_val):
-    """
-    Kalkulasi skor psikologis harian (Skala 0-12).
-    Diselaraskan agar total skor maksimal 12 sesuai dokumen rancangan.
-    """
-    skor = 0
-    
-    # 1. Faktor Kondisi (Bobot proporsional max 8 poin)
-    # Input asli dari fungsi parse_value: 2 (Baik), 4 (Biasa), 7 (Lelah), 10 (Kewalahan)
-    if kondisi_val >= 10:
-        skor += 8    # Kewalahan banget = 8 poin
-    elif kondisi_val >= 7:
-        skor += 5    # Agak lelah = 5 poin
-    elif kondisi_val >= 4:
-        skor += 2    # Biasa aja = 2 poin
-    else:
-        skor += 0    # Baik, siap gas = 0 poin
-        
-    # 2. Faktor Kualitas Tidur (Bobot max 2 poin)
-    if tidur_val < 5.0:
-        skor += 2    # Kurang dari 5 jam = 2 poin
-    elif tidur_val < 7.0:
-        skor += 1    # 5-7 jam = 1 poin
-        
-    # 3. Faktor Beban Eksternal (Bobot max 2 poin)
-    # Input asli dari parse_value sudah berupa angka 0, 1, atau 2
-    skor += eksternal_val
-    
-    # Pastikan output akhir maksimal 12 sesuai format kuesioner (6 item skor 0-2)
-    return min(skor, 12)
-=======
->>>>>>> Stashed changes
 
 def run_inference(data):
     """
@@ -348,14 +309,12 @@ def run_inference(data):
 
     tidur_jam   = parse_value("kualitas_tidur", data.get("kualitas_tidur", "5–7 jam"))
     tugas_num   = parse_value("tugas_tertunda",  data.get("tugas_tertunda", "0"))
-    eksternal   = parse_value("eksternal",        data.get("eksternal", "Tidak ada"))
-    motivasi_raw = data.get("motivasi", "Sedang")
-    motivasi_num = parse_value("motivasi", motivasi_raw)
+    motivasi_num = 1  # tidak dipakai langsung; skor psikologis dari kuesioner
 
-    kondisi_raw  = data.get("kondisi_emoji", "😐 Biasa aja")
-    skor_psiko   = hitung_skor_psikologis(kondisi_raw, tidur_jam, eksternal, motivasi_raw)
+    skor_psiko   = hitung_skor_psikologis(data)
+    motivasi_raw = "Sedang"  # fallback untuk label faktor
 
-    # ── Tahap 1: Forward Chaining ──────────────────────────────────────────
+    # Tahap 1: Forward Chaining
     fc_label, fc_reason = forward_chaining(ipk, sks_lulus, semester, sisa_matkul)
     if fc_label:
         faktor = [
@@ -366,7 +325,7 @@ def run_inference(data):
         ]
         return generate_output(fc_label, 95, faktor)
 
-    # ── Tahap 2: Decision Tree (model.pkl dari dataset.csv) ────────────────
+    # Tahap 2: Decision Tree (model.pkl dari dataset.csv)
     dt_label_raw, dt_prob, top_factors = run_decision_tree(
         semester, ipk, sks_lulus, sks_diambil,
         sisa_matkul, tugas_num, skor_psiko,
@@ -396,7 +355,7 @@ def run_inference(data):
     return generate_output(dt_label, dt_prob, faktor, top_factors)
 
 
-# ── ROUTES ───────────────────────────────────────────────────────────────────
+# ROUTES
 @app.route("/")
 def index():
     return render_template("index.html")
