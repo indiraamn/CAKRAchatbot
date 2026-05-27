@@ -267,7 +267,7 @@ FLOW = {
     "tanya_perasaan": {
         "msg": "Bagaimana perasaanmu hari ini?",
         "input_type": "choices",
-        "choices": ["Baik", "Biasa", "Tidak baik"],
+        "choices": ["Baik😊", "Biasa🙂", "Tidak baik😣"],
         "key": "psiko_perasaan",
         "next": "tanya_motivasi_psiko",
     },
