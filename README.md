@@ -8,7 +8,7 @@ Chatbot deteksi dini risiko keterlambatan kelulusan mahasiswa.
 pip install -r requirements.txt
 ```
 
-### 2. Jalankan server
+### 2. Jalankan server (masukkan secret key terlebih dahulu --> bebas kata apapun)
 ```
 python app.py
 ```
