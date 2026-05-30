@@ -5,7 +5,7 @@ import pandas as pd
 import os
 
 app = Flask(__name__)
-app.secret_key = ""
+app.secret_key = ""  # Ganti dengan kunci rahasia yang Anda inginkan untuk sesi Flask
 
 # Load model yang sudah dilatih dari dataset.csv
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
